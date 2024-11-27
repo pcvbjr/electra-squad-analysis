@@ -1,1 +1,1 @@
-TRANSFORMERS_CACHE=../gdrive/MyDrive/MSAI Course Work/NLP/final_project/hf_cache python3 run.py --do_train --task qa --dataset squad --output_dir ../gdrive/MyDrive/MSAI Course Work/NLP/final_project/trained_model/
+TRANSFORMERS_CACHE="../gdrive/MyDrive/MSAI Course Work/NLP/final_project/hf_cache" python3 run.py --do_train --task qa --dataset squad --output_dir "../gdrive/MyDrive/MSAI Course Work/NLP/final_project/trained_model/" --per_device_train_batch_size 128
