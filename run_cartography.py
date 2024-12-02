@@ -66,11 +66,11 @@ class SaveDynamicsCallback(TrainerCallback):
             # print('----', i)
             # print(self.train_dataset[i])
 
+        print(f'Making predictions for epoch {state.epoch-1:.0f}.')
         with open(os.devnull, 'w') as fnull:
             with redirect_stderr(fnull):
-                print(f'Making predictions for epoch {state.epoch:.0f}.')
                 predictions = self.trainer.predict(self.train_dataset)
-                print('Done making predictions')
+        print('Done making predictions')
         start_logits, end_logits = predictions.predictions
         start_labels, end_labels = predictions.label_ids
         # print('---- logits\n', start_logits.shape)
@@ -80,12 +80,12 @@ class SaveDynamicsCallback(TrainerCallback):
         for idx, (logit, label) in enumerate(zip(start_logits, start_labels)):
             example_data = {
                 "guid": idx,
-                "gold_label": int(label),
-                "logits": logit.tolist(),
+                "gold": int(label),
+                f"logits_epoch_{state.epoch-1}": logit.tolist(),
             }
             self.epoch_data.append(example_data)
 
-        output_file = os.path.join(self.output_dir, f"dynamics_epoch_{state.epoch:.0f}.jsonl")
+        output_file = os.path.join(self.output_dir, f"dynamics_epoch_{state.epoch-1:.0f}.jsonl")
         with open(output_file, "w") as f:
             for example_data in self.epoch_data:
                 json.dump(example_data, f)
