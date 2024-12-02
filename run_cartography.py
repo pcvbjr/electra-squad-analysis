@@ -6,6 +6,8 @@ from helpers import prepare_dataset_nli, prepare_train_dataset_qa, \
     prepare_validation_dataset_qa, QuestionAnsweringTrainer, compute_accuracy
 import os
 import json
+import sys
+from contextlib import redirect_stderr
 
 NUM_PREPROCESSING_WORKERS = 2
 
@@ -63,7 +65,10 @@ class SaveDynamicsCallback(TrainerCallback):
         # for i in range(len(self.train_dataset)):
             # print('----', i)
             # print(self.train_dataset[i])
-        predictions = self.trainer.predict(self.train_dataset)
+
+        with open(os.devnull, 'w') as fnull:
+            with redirect_stderr(fnull):
+                predictions = self.trainer.predict(self.train_dataset)
         start_logits, end_logits = predictions.predictions
         start_labels, end_labels = predictions.label_ids
         # print('---- logits\n', start_logits.shape)
