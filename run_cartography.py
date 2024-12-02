@@ -68,7 +68,9 @@ class SaveDynamicsCallback(TrainerCallback):
 
         with open(os.devnull, 'w') as fnull:
             with redirect_stderr(fnull):
+                print(f'Making predictions for epoch {state.epoch:.0f}.')
                 predictions = self.trainer.predict(self.train_dataset)
+                print('Done making predictions')
         start_logits, end_logits = predictions.predictions
         start_labels, end_labels = predictions.label_ids
         # print('---- logits\n', start_logits.shape)
