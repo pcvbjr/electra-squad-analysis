@@ -1,1 +1,1 @@
-python3 run.py --do_train --task qa --dataset hotpotqa/hotpot_qa --max_train_samples 100 --output-dir ./outputs
+python3 run_cartography.py --do_train --task qa --dataset squad --max_train_samples 100 --output-dir ./outputs

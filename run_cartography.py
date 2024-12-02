@@ -9,6 +9,84 @@ import json
 
 NUM_PREPROCESSING_WORKERS = 2
 
+from transformers import TrainerCallback
+import json
+import os
+
+class SaveDynamicsCallback(TrainerCallback):
+    def __init__(self, output_dir: str, trainer: Trainer, train_dataset: datasets.Dataset):
+        """
+        Initialize the callback with the directory where the dynamics files will be saved.
+        Args:
+            output_dir (str): Path to the directory for saving dynamics files.
+        """
+        self.output_dir = output_dir
+        os.makedirs(output_dir, exist_ok=True)
+        self.epoch_data = []
+        self.guid_index = {}
+        self.trainer = trainer
+        self.train_dataset = train_dataset
+
+    def on_train_begin(self, args, state, control, **kwargs):
+        """
+        Initialize a dictionary to store GUID and gold label mappings.
+        """
+        train_dataset = kwargs['train_dataloader'].dataset
+        for idx, example in enumerate(train_dataset):
+            guid = example.get("guid")
+            label = example.get("label")  # Adjust based on dataset structure
+            self.guid_index[idx] = {"guid": guid, "gold_label": label}
+
+    # def on_prediction_step(self, args, state, control, logs=None, **kwargs):
+    #     """
+    #     Save logits for each example during prediction.
+    #     """
+    #     predictions = kwargs["predictions"]  # Predicted logits
+    #     label_ids = kwargs["label_ids"]  # Gold label IDs
+    #     if predictions is None or label_ids is None:
+    #         return
+
+    #     # Iterate through the predictions and labels
+    #     for idx, (logits, label) in enumerate(zip(predictions, label_ids)):
+    #         example_data = {
+    #             "guid": self.guid_index[idx]["guid"],
+    #             "gold_label": self.guid_index[idx]["gold_label"],
+    #             "logits": logits.tolist(),
+    #         }
+    #         self.epoch_data.append(example_data)
+
+    def on_epoch_end(self, args, state, control, **kwargs):
+        """
+        Save the accumulated dynamics data at the end of the epoch.
+        """
+        # Predict on the entire dataset
+        # for i in range(len(self.train_dataset)):
+            # print('----', i)
+            # print(self.train_dataset[i])
+        predictions = self.trainer.predict(self.train_dataset)
+        start_logits, end_logits = predictions.predictions
+        start_labels, end_labels = predictions.label_ids
+        # print('---- logits\n', start_logits.shape)
+        # print('---- labels\n', start_labels.shape)
+
+        # Iterate through the predictions and labels
+        for idx, (logit, label) in enumerate(zip(start_logits, start_labels)):
+            example_data = {
+                "guid": idx,
+                "gold_label": int(label),
+                "logits": logit.tolist(),
+            }
+            self.epoch_data.append(example_data)
+
+        output_file = os.path.join(self.output_dir, f"dynamics_epoch_{state.epoch:.0f}.jsonl")
+        with open(output_file, "w") as f:
+            for example_data in self.epoch_data:
+                json.dump(example_data, f)
+                f.write("\n")
+
+        # Clear the epoch data after saving
+        self.epoch_data = []
+
 
 def main():
     argp = HfArgumentParser(TrainingArguments)
@@ -162,8 +240,14 @@ def main():
         train_dataset=train_dataset_featurized,
         eval_dataset=eval_dataset_featurized,
         tokenizer=tokenizer,
-        compute_metrics=compute_metrics_and_store_predictions
+        # compute_metrics=compute_metrics_and_store_predictions
     )
+
+    # Add callback to save dynamics
+    if training_args.do_train:
+        trainer.add_callback(SaveDynamicsCallback(os.path.join(training_args.output_dir, 'dynamics'), 
+                             trainer,
+                             train_dataset_featurized))
 
     # Train and/or evaluate
     if training_args.do_train:
